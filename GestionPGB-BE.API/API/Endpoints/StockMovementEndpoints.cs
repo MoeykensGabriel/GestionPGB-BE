@@ -10,7 +10,7 @@ public static class StockMovementEndpoints
 {
     public static void MapStockMovementEndpoints(this WebApplication app)
     {
-        var group = app.MapGroup("/api/movements").WithTags("StockMovements").RequireAuthorization();
+        var group = app.MapGroup("/api/movements").WithTags("StockMovements").RequireAuthorization().RequireRateLimiting("global");
 
         group.MapGet("/", async (IStockMovementService service, int page = 1, int pageSize = 25, DateTime? from = null, DateTime? to = null) =>
             Results.Ok(await service.GetPagedAsync(page, pageSize, from, to)))

@@ -16,7 +16,8 @@ public static class AuthEndpoints
             return result is null ? Results.Unauthorized() : Results.Ok(result);
         })
         .WithName("Login")
-        .AllowAnonymous();
+        .AllowAnonymous()
+        .RequireRateLimiting("login");
 
         group.MapPost("/register", async (RegisterDto dto, IAuthService service) =>
         {

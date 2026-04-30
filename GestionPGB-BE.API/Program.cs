@@ -1,4 +1,5 @@
 using System.Text;
+using System.Threading.RateLimiting;
 using GestionPGB_BE.API.API.Endpoints;
 using GestionPGB_BE.API.API.Hubs;
 using GestionPGB_BE.API.Application.Services;
@@ -8,6 +9,7 @@ using GestionPGB_BE.API.Infrastructure.Data;
 using GestionPGB_BE.API.Infrastructure.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -18,21 +20,35 @@ using Serilog.Events;
 var builder = WebApplication.CreateBuilder(args);
 
 // Serilog: Console (all levels) + PostgreSQL (Warning+)
-builder.Host.UseSerilog((context, _, configuration) => configuration
-    .MinimumLevel.Information()
-    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
-    .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
-    .Enrich.FromLogContext()
-    .WriteTo.Console()
-    .WriteTo.PostgreSQL(
-        connectionString: context.Configuration.GetConnectionString("DefaultConnection"),
-        tableName: "system_logs",
-        needAutoCreateTable: true,
-        restrictedToMinimumLevel: LogEventLevel.Warning));
+builder.Host.UseSerilog((context, _, configuration) =>
+{
+    var serilogConn =
+        Environment.GetEnvironmentVariable("CONNECTION_STRING")
+        ?? context.Configuration.GetConnectionString("DefaultConnection");
 
-// Database
+    configuration
+        .MinimumLevel.Information()
+        .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+        .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+        .Enrich.FromLogContext()
+        .WriteTo.Console();
+
+    if (!string.IsNullOrEmpty(serilogConn))
+        configuration.WriteTo.PostgreSQL(
+            connectionString: serilogConn,
+            tableName: "system_logs",
+            needAutoCreateTable: true,
+            restrictedToMinimumLevel: LogEventLevel.Warning);
+});
+
+// Database — lee CONNECTION_STRING (Railway) o cae a appsettings/user-secrets (local)
+var connectionString =
+    Environment.GetEnvironmentVariable("CONNECTION_STRING")
+    ?? builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("No connection string configured.");
+
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(connectionString));
 
 // Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
@@ -96,6 +112,34 @@ builder.Services.AddCors(options =>
               .AllowCredentials());
 });
 
+// Rate Limiting (spec 6.1): 5 intentos de login/min · 100 peticiones generales/min por IP
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    // Política para el endpoint de login
+    options.AddFixedWindowLimiter("login", o =>
+    {
+        o.Window = TimeSpan.FromMinutes(1);
+        o.PermitLimit = 5;
+        o.QueueLimit = 0;
+        o.AutoReplenishment = true;
+    });
+
+    // Política global por IP
+    options.AddPolicy("global", context =>
+    {
+        var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
+        {
+            Window = TimeSpan.FromMinutes(1),
+            PermitLimit = 100,
+            QueueLimit = 0,
+            AutoReplenishment = true
+        });
+    });
+});
+
 // SignalR
 builder.Services.AddSignalR()
     .AddJsonProtocol(options =>
@@ -146,6 +190,13 @@ builder.Services.AddScoped<IPdfService, PdfService>();
 
 var app = builder.Build();
 
+// Migraciones automáticas (necesario en Railway — no hay consola disponible)
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await db.Database.MigrateAsync();
+}
+
 // Seed de roles al iniciar
 using (var scope = app.Services.CreateScope())
 {
@@ -189,8 +240,14 @@ if (app.Environment.IsDevelopment())
 app.UseMiddleware<GestionPGB_BE.API.API.Middleware.ExceptionHandlingMiddleware>();
 app.UseCors("FrontendPolicy");
 app.UseHttpsRedirection();
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Health check (usado por Railway)
+app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }))
+   .AllowAnonymous()
+   .ExcludeFromDescription();
 
 // Minimal API Endpoints
 app.MapAuthEndpoints();
