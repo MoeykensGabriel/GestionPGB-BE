@@ -1,0 +1,32 @@
+# Build output
+bin/
+obj/
+out/
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.suo.*
+*.sln
+*.slnx
+
+# NuGet
+*.nupkg
+packages/
+
+# Test results
+TestResults/
+
+# Logs
+*.log
+
+# Environment (sensitive)
+appsettings.Development.json
+*.local.json
+
+# OS
+.DS_Store
+Thumbs.db
