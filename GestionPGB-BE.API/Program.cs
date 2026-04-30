@@ -99,9 +99,12 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-// CORS - solo permite el origen del frontend
-var allowedOrigins = builder.Configuration["Cors:AllowedOrigins"]?.Split(',')
-    ?? ["http://localhost:3000"];
+// CORS - lee CORS_ORIGINS (Railway/prod) o cae a appsettings (local)
+var allowedOrigins =
+    (Environment.GetEnvironmentVariable("CORS_ORIGINS")
+    ?? builder.Configuration["Cors:AllowedOrigins"]
+    ?? "http://localhost:3000")
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
 builder.Services.AddCors(options =>
 {
