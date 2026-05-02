@@ -12,9 +12,9 @@ public class StockMovementService : IStockMovementService
 
     public StockMovementService(IStockMovementRepository repository) => _repository = repository;
 
-    public async Task<PagedResultDto<MovementResponseDto>> GetPagedAsync(int page, int pageSize, DateTime? from, DateTime? to)
+    public async Task<PagedResultDto<MovementResponseDto>> GetPagedAsync(int page, int pageSize, DateTime? from, DateTime? to, string? createdBy = null)
     {
-        var (items, total) = await _repository.GetPagedAsync(page, pageSize, from, to);
+        var (items, total) = await _repository.GetPagedAsync(page, pageSize, from, to, createdBy);
         return new PagedResultDto<MovementResponseDto>(items.Select(ToDto), total, page, pageSize);
     }
 

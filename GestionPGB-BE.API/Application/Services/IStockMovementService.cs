@@ -6,7 +6,7 @@ namespace GestionPGB_BE.API.Application.Services;
 
 public interface IStockMovementService
 {
-    Task<PagedResultDto<MovementResponseDto>> GetPagedAsync(int page, int pageSize, DateTime? from, DateTime? to);
+    Task<PagedResultDto<MovementResponseDto>> GetPagedAsync(int page, int pageSize, DateTime? from, DateTime? to, string? createdBy = null);
     Task<IEnumerable<MovementResponseDto>> GetByProductIdAsync(Guid productId);
     Task<MovementResponseDto?> RegisterMovementAsync(CreateMovementDto dto, string createdBy);
     Task<MovementResponseDto?> RegisterMovementByBarcodeAsync(string barcode, MovementType type, string createdBy);

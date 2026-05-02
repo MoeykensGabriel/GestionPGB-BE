@@ -12,8 +12,8 @@ public static class StockMovementEndpoints
     {
         var group = app.MapGroup("/api/movements").WithTags("StockMovements").RequireAuthorization().RequireRateLimiting("global");
 
-        group.MapGet("/", async (IStockMovementService service, int page = 1, int pageSize = 25, DateTime? from = null, DateTime? to = null) =>
-            Results.Ok(await service.GetPagedAsync(page, pageSize, from, to)))
+        group.MapGet("/", async (IStockMovementService service, int page = 1, int pageSize = 25, DateTime? from = null, DateTime? to = null, string? createdBy = null) =>
+            Results.Ok(await service.GetPagedAsync(page, pageSize, from, to, createdBy)))
         .WithName("GetAllMovements");
 
         group.MapGet("/product/{productId:guid}", async (Guid productId, IStockMovementService service) =>

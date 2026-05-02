@@ -12,12 +12,13 @@ public class StockMovementRepository : IStockMovementRepository
 
     public StockMovementRepository(AppDbContext context) => _context = context;
 
-    public async Task<(IEnumerable<StockMovement> Items, int Total)> GetPagedAsync(int page, int pageSize, DateTime? from, DateTime? to)
+    public async Task<(IEnumerable<StockMovement> Items, int Total)> GetPagedAsync(int page, int pageSize, DateTime? from, DateTime? to, string? createdBy = null)
     {
         IQueryable<StockMovement> query = _context.StockMovements.AsNoTracking().Include(m => m.Product);
 
-        if (from.HasValue) query = query.Where(m => m.CreatedAt >= from.Value);
-        if (to.HasValue)   query = query.Where(m => m.CreatedAt <= to.Value);
+        if (from.HasValue)              query = query.Where(m => m.CreatedAt >= from.Value);
+        if (to.HasValue)                query = query.Where(m => m.CreatedAt <= to.Value);
+        if (!string.IsNullOrEmpty(createdBy)) query = query.Where(m => m.CreatedBy == createdBy);
 
         var total = await query.CountAsync();
         var items = await query
