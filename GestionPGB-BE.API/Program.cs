@@ -144,10 +144,16 @@ builder.Services.AddRateLimiter(options =>
 });
 
 // SignalR
-builder.Services.AddSignalR()
-    .AddJsonProtocol(options =>
-        options.PayloadSerializerOptions.Converters.Add(
-            new System.Text.Json.Serialization.JsonStringEnumConverter()));
+builder.Services.AddSignalR(options =>
+{
+    // Railway termina SSL en el proxy — los WebSockets pasan por HTTP internamente.
+    // Si no se configura keep-alive, el proxy cierra la conexión idle antes de los 60s.
+    options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+    options.ClientTimeoutInterval = TimeSpan.FromSeconds(60);
+})
+.AddJsonProtocol(options =>
+    options.PayloadSerializerOptions.Converters.Add(
+        new System.Text.Json.Serialization.JsonStringEnumConverter()));
 
 // Serializar enums como strings en toda la API
 builder.Services.ConfigureHttpJsonOptions(options =>
@@ -242,7 +248,11 @@ if (app.Environment.IsDevelopment())
 
 app.UseMiddleware<GestionPGB_BE.API.API.Middleware.ExceptionHandlingMiddleware>();
 app.UseCors("FrontendPolicy");
-app.UseHttpsRedirection();
+// UseHttpsRedirection se omite en producción: Railway termina SSL en su proxy
+// y la app recibe HTTP internamente. Redirigir a HTTPS desde adentro rompe
+// el WebSocket negotiate. En desarrollo el navegador ya va a http://localhost.
+if (!app.Environment.IsProduction())
+    app.UseHttpsRedirection();
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
