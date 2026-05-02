@@ -4,5 +4,5 @@ namespace GestionPGB_BE.API.Application.Services;
 
 public interface IPdfService
 {
-    byte[] GenerateQuotationPdf(IEnumerable<ProductResponseDto> products);
+    byte[] GenerateQuotationPdf(IEnumerable<QuotationPdfItemDto> items);
 }

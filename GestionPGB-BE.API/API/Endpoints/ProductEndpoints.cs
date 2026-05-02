@@ -19,14 +19,20 @@ public static class ProductEndpoints
 
         group.MapPost("/quotation/pdf", async (QuotationRequestDto dto, IProductService productService, IPdfService pdfService) =>
         {
-            if (dto.ProductIds is null || dto.ProductIds.Count == 0)
+            if (dto.Items is null || dto.Items.Count == 0)
                 return Results.BadRequest("Debe seleccionar al menos un producto.");
 
-            var products = await productService.GetByIdsAsync(dto.ProductIds);
+            var productIds = dto.Items.Select(i => i.ProductId).ToList();
+            var products = await productService.GetByIdsAsync(productIds);
             if (!products.Any())
                 return Results.NotFound("Ningún producto encontrado con los IDs provistos.");
 
-            var pdf = pdfService.GenerateQuotationPdf(products);
+            var quantityMap = dto.Items.ToDictionary(i => i.ProductId, i => i.Quantity);
+            var pdfItems = products
+                .Select(p => new QuotationPdfItemDto(p, quantityMap[p.Id]))
+                .ToList();
+
+            var pdf = pdfService.GenerateQuotationPdf(pdfItems);
             return Results.File(pdf, "application/pdf", $"cotizacion_{DateTime.Now:yyyyMMdd}.pdf");
         })
         .WithName("GenerateQuotationPdf")

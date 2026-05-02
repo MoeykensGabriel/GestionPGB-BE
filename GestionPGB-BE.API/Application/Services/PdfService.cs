@@ -7,12 +7,12 @@ namespace GestionPGB_BE.API.Application.Services;
 
 public class PdfService : IPdfService
 {
-    public byte[] GenerateQuotationPdf(IEnumerable<ProductResponseDto> products)
+    public byte[] GenerateQuotationPdf(IEnumerable<QuotationPdfItemDto> items)
     {
         QuestPDF.Settings.License = LicenseType.Community;
 
-        var grouped = products
-            .GroupBy(p => p.ProviderName)
+        var grouped = items
+            .GroupBy(i => i.Product.ProviderName)
             .OrderBy(g => g.Key)
             .ToList();
 
@@ -60,15 +60,14 @@ public class PdfService : IPdfService
                                     .Padding(5).AlignRight().Text("Cantidad").Bold();
                             });
 
-                            foreach (var product in group)
+                            foreach (var item in group)
                             {
-                                int needed = Math.Max(1, product.MinRequiredStock - product.CurrentStock);
                                 table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
-                                    .Padding(5).Text(product.ItemName);
+                                    .Padding(5).Text(item.Product.ItemName);
                                 table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
-                                    .Padding(5).Text(product.Description);
+                                    .Padding(5).Text(item.Product.Description);
                                 table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
-                                    .Padding(5).AlignRight().Text(needed.ToString());
+                                    .Padding(5).AlignRight().Text(item.Quantity.ToString());
                             }
                         });
                     }
