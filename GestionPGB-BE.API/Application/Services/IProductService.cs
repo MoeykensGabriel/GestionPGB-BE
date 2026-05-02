@@ -9,6 +9,7 @@ public interface IProductService
     Task<ProductResponseDto?> GetByIdAsync(Guid id);
     Task<ProductResponseDto?> GetByBarcodeAsync(string barcode);
     Task<IEnumerable<ProductResponseDto>> GetLowStockAsync();
+    Task<IEnumerable<ProductResponseDto>> GetByIdsAsync(IEnumerable<Guid> ids);
     Task<ProductResponseDto> CreateAsync(CreateProductDto dto);
     Task<ImportResultDto> ImportAsync(IEnumerable<CreateProductDto> dtos);
     Task<ProductResponseDto?> UpdateAsync(Guid id, UpdateProductDto dto);

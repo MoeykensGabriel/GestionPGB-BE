@@ -32,6 +32,9 @@ public class ProductService : IProductService
     public async Task<IEnumerable<ProductResponseDto>> GetLowStockAsync() =>
         (await _repository.GetLowStockAsync()).Select(ToDto);
 
+    public async Task<IEnumerable<ProductResponseDto>> GetByIdsAsync(IEnumerable<Guid> ids) =>
+        (await _repository.GetByIdsAsync(ids)).Select(ToDto);
+
     public async Task<ProductResponseDto> CreateAsync(CreateProductDto dto)
     {
         var product = new Product

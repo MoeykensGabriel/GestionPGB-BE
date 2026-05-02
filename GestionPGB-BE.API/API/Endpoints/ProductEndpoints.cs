@@ -17,13 +17,19 @@ public static class ProductEndpoints
             Results.Ok(await service.GetLowStockAsync()))
         .WithName("GetLowStockProducts");
 
-        group.MapGet("/quotation/pdf", async (IProductService productService, IPdfService pdfService) =>
+        group.MapPost("/quotation/pdf", async (QuotationRequestDto dto, IProductService productService, IPdfService pdfService) =>
         {
-            var lowStock = await productService.GetLowStockAsync();
-            var pdf = pdfService.GenerateQuotationPdf(lowStock);
+            if (dto.ProductIds is null || dto.ProductIds.Count == 0)
+                return Results.BadRequest("Debe seleccionar al menos un producto.");
+
+            var products = await productService.GetByIdsAsync(dto.ProductIds);
+            if (!products.Any())
+                return Results.NotFound("Ningún producto encontrado con los IDs provistos.");
+
+            var pdf = pdfService.GenerateQuotationPdf(products);
             return Results.File(pdf, "application/pdf", $"cotizacion_{DateTime.Now:yyyyMMdd}.pdf");
         })
-        .WithName("GetQuotationPdf")
+        .WithName("GenerateQuotationPdf")
         .RequireAuthorization(p => p.RequireRole("Admin"));
 
         group.MapGet("/{id:guid}", async (Guid id, IProductService service) =>

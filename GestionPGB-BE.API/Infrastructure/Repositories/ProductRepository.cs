@@ -51,6 +51,13 @@ public class ProductRepository : IProductRepository
             .ThenBy(p => p.ItemName)
             .ToListAsync();
 
+    public async Task<IEnumerable<Product>> GetByIdsAsync(IEnumerable<Guid> ids) =>
+        await _context.Products.AsNoTracking()
+            .Where(p => ids.Contains(p.Id))
+            .OrderBy(p => p.ProviderName)
+            .ThenBy(p => p.ItemName)
+            .ToListAsync();
+
     public async Task<Product> CreateAsync(Product product)
     {
         product.Id = Guid.NewGuid();

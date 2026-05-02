@@ -9,6 +9,7 @@ public interface IProductRepository
     Task<Product?> GetByIdAsync(Guid id);
     Task<Product?> GetByBarcodeAsync(string barcode);
     Task<IEnumerable<Product>> GetLowStockAsync();
+    Task<IEnumerable<Product>> GetByIdsAsync(IEnumerable<Guid> ids);
     Task<Product> CreateAsync(Product product);
     Task<(int imported, int skipped, List<string> skippedBarcodes)> ImportAsync(IEnumerable<Product> products);
     Task<Product> UpdateAsync(Product product);

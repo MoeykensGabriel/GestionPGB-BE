@@ -32,7 +32,7 @@ Cero Precios: No se almacena, procesa ni calcula información monetaria en ningu
 
 Punto de Pedido: La inteligencia del sistema reside en comparar el current_stock contra el min_required_stock para alertar faltantes.
 
-Pedido de Cotización: En lugar de Órdenes de Compra con valores, se generan "Pedidos de Cotización" que contienen solo la lista de materiales faltantes.
+Pedido de Cotización: En lugar de Órdenes de Compra con valores, se generan "Pedidos de Cotización" que contienen la lista de materiales faltantes y tambien en caso de que el usuario quiera agregar cualquier producto, a pesar que este en stock OK, el sistema deberia .
 
 ############################
 2.1 Arquitectura de Software
