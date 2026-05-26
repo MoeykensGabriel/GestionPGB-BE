@@ -190,12 +190,23 @@ builder.Services.AddSwaggerGen(options =>
 // Repositorios
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<IStockMovementRepository, StockMovementRepository>();
+builder.Services.AddScoped<IWorkshopOrderRepository, WorkshopOrderRepository>();
 
 // Servicios
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IStockMovementService, StockMovementService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IPdfService, PdfService>();
+builder.Services.AddScoped<IWorkshopOrderService, WorkshopOrderService>();
+
+// HttpClient para callbacks al sistema del taller
+builder.Services.AddHttpClient("WorkshopCallback", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(10);
+});
+
+// Filtro de API key para endpoints invocados por el sistema del taller
+builder.Services.AddScoped<GestionPGB_BE.API.Infrastructure.Auth.ApiKeyEndpointFilter>();
 
 var app = builder.Build();
 
@@ -266,6 +277,7 @@ app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = Dat
 app.MapAuthEndpoints();
 app.MapProductEndpoints();
 app.MapStockMovementEndpoints();
+app.MapWorkshopOrderEndpoints();
 
 // SignalR Hub
 app.MapHub<StockHub>("/hubs/stock");

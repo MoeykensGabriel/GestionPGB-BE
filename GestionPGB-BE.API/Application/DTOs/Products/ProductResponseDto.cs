@@ -6,6 +6,8 @@ public record ProductResponseDto(
     string ItemName,
     string Description,
     int CurrentStock,
+    int ReservedStock,
+    int AvailableStock,
     int MinRequiredStock,
     string ProviderName,
     bool IsLowStock

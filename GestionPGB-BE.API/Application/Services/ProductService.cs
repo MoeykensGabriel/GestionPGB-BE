@@ -88,7 +88,8 @@ public class ProductService : IProductService
 
     private static ProductResponseDto ToDto(Product p) => new(
         p.Id, p.Barcode, p.ItemName, p.Description,
-        p.CurrentStock, p.MinRequiredStock, p.ProviderName,
+        p.CurrentStock, p.ReservedStock, p.AvailableStock,
+        p.MinRequiredStock, p.ProviderName,
         p.CurrentStock <= p.MinRequiredStock
     );
 }
