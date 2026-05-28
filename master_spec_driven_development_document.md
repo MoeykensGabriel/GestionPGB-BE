@@ -170,3 +170,30 @@ Optimización: Desactivar SensitiveDataLogging y forzar el uso de .AsNoTracking(
 Infraestructura:
 
 Backend + DB: Railway (configurado para despliegue continuo desde el repo).
+
+=== INTEGRACION CON EL TALLER MECANICO ===
+
+1. Datos que debe recibir y procesar
+Debe exponer un mecanismo para recibir un paquete de datos externo que contenga: Identificación del vehículo (patente), Lista de ítems (Código de repuesto y Cantidad).
+
+2. Eventos y Lógica del Sistema
+Al recibir un pedido del taller:
+
+El sistema debe recorrer código por código y verificar si la cantidad solicitada existe en el stock actual.
+
+Si hay stock suficiente: Debe hacer una reserva lógica (separar esa cantidad para que figure como "comprometida" y no se use para otra cosa) y marcar ese ítem como "Disponible para preparar".
+
+Si no hay stock o no alcanza: Debe calcular la diferencia faltante y registrar ese ítem como "Faltante para compra".
+
+El sistema debe guardar este grupo de repuestos como un "Pedido Pendiente" vinculado a la patente del auto y devolverle al Sistema de Taller el resultado de este análisis.
+
+3. Cambios en la Experiencia de Usuario (Depósito)
+Nueva Sección ("Pedidos de Oficina"): Una bandeja de entrada para quien maneje el depósito.
+
+Comportamiento de la pantalla: * Los pedidos se muestran agrupados por patente.
+
+Si la patente tiene todos sus repuestos en verde (disponibles), se habilita un botón para "Confirmar Entrega". Al presionarlo, se realiza la baja definitiva del stock y se notifica al sistema de taller que el pedido fue entregado.
+
+Si la patente tiene repuestos en rojo (faltantes), se muestra la lista de esos códigos específicos para saber qué pedir al proveedor. Al lado de cada faltante, el usuario debe poder actualizar el estado manualmente a "Comprado / En camino" para que la oficina sepa que el trámite está iniciado.
+
+¿¿¿¿ Fase C (integración GestionPGB)
