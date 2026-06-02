@@ -23,8 +23,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseSerilog((context, _, configuration) =>
 {
     var serilogConn = NormalizePostgresConnectionString(
-        Environment.GetEnvironmentVariable("CONNECTION_STRING")
-        ?? context.Configuration.GetConnectionString("DefaultConnection"));
+        ResolveRawPgConnection(context.Configuration));
 
     configuration
         .MinimumLevel.Information()
@@ -41,12 +40,10 @@ builder.Host.UseSerilog((context, _, configuration) =>
             restrictedToMinimumLevel: LogEventLevel.Warning);
 });
 
-// Database — lee CONNECTION_STRING (Railway) o cae a appsettings/user-secrets (local).
-// Railway entrega la URL en formato URI (postgresql://...); se normaliza a key=value para Npgsql.
-var rawConnection =
-    Environment.GetEnvironmentVariable("CONNECTION_STRING")
-    ?? builder.Configuration.GetConnectionString("DefaultConnection");
-
+// Database — resuelve la conexión desde varias fuentes (Railway expone distintas) y cae a
+// appsettings/user-secrets en local. Railway entrega la URL en formato URI (postgresql://...);
+// se normaliza a key=value para Npgsql.
+var rawConnection = ResolveRawPgConnection(builder.Configuration);
 var connectionString = NormalizePostgresConnectionString(rawConnection);
 
 // Validación temprana con mensaje accionable (en vez del críptico "Host can't be null" de Npgsql).
@@ -54,9 +51,9 @@ if (string.IsNullOrWhiteSpace(connectionString) ||
     !connectionString.Contains("Host", StringComparison.OrdinalIgnoreCase))
 {
     throw new InvalidOperationException(
-        "CONNECTION_STRING vacía, no configurada o sin host. En Railway: el servicio debe tener la " +
-        "variable CONNECTION_STRING referenciando ${{Postgres.DATABASE_URL}} y el cambio debe estar APLICADO. " +
-        $"(longitud recibida: {rawConnection?.Length ?? 0})");
+        "No se encontró connection string válida. En Railway, el servicio debe tener UNA de estas " +
+        "variables resolviendo al Postgres: CONNECTION_STRING, DATABASE_URL o DATABASE_PUBLIC_URL " +
+        $"(referencia ${{{{Postgres.DATABASE_URL}}}}), con el cambio aplicado. (longitud recibida: {rawConnection?.Length ?? 0})");
 }
 
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -298,6 +295,18 @@ app.Run();
 
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
+// Resuelve la conexión Postgres desde las distintas variables que puede exponer Railway,
+// tratando los strings vacíos como ausentes. Cae a appsettings (DefaultConnection) en local.
+static string? ResolveRawPgConnection(Microsoft.Extensions.Configuration.IConfiguration config)
+{
+    static string? NonEmpty(string? v) => string.IsNullOrWhiteSpace(v) ? null : v;
+
+    return NonEmpty(Environment.GetEnvironmentVariable("CONNECTION_STRING"))
+        ?? NonEmpty(Environment.GetEnvironmentVariable("DATABASE_URL"))
+        ?? NonEmpty(Environment.GetEnvironmentVariable("DATABASE_PUBLIC_URL"))
+        ?? NonEmpty(config.GetConnectionString("DefaultConnection"));
+}
+
 // Railway/Heroku entregan la conexión Postgres como URI (postgresql://user:pass@host:port/db),
 // formato que Npgsql NO parsea. Esta función la convierte a key=value (Host=...;Username=...).
 // Si la cadena ya viene en formato key=value (local), se devuelve sin cambios.
@@ -320,8 +329,9 @@ static string? NormalizePostgresConnectionString(string? raw)
         Username = Uri.UnescapeDataString(userInfo[0]),
         Password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : string.Empty,
         Database = uri.AbsolutePath.TrimStart('/'),
-        // El proxy público de Railway exige SSL. En Npgsql 8, Require encripta sin validar el cert.
-        SslMode = Npgsql.SslMode.Require,
+        // Prefer negocia SSL automáticamente: lo usa en el proxy público (que lo exige) y
+        // funciona también en la red interna de Railway. En Npgsql 8 no valida el certificado.
+        SslMode = Npgsql.SslMode.Prefer,
     };
 
     return csb.ConnectionString;
