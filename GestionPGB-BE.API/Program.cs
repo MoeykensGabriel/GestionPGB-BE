@@ -22,9 +22,9 @@ var builder = WebApplication.CreateBuilder(args);
 // Serilog: Console (all levels) + PostgreSQL (Warning+)
 builder.Host.UseSerilog((context, _, configuration) =>
 {
-    var serilogConn =
+    var serilogConn = NormalizePostgresConnectionString(
         Environment.GetEnvironmentVariable("CONNECTION_STRING")
-        ?? context.Configuration.GetConnectionString("DefaultConnection");
+        ?? context.Configuration.GetConnectionString("DefaultConnection"));
 
     configuration
         .MinimumLevel.Information()
@@ -41,10 +41,12 @@ builder.Host.UseSerilog((context, _, configuration) =>
             restrictedToMinimumLevel: LogEventLevel.Warning);
 });
 
-// Database — lee CONNECTION_STRING (Railway) o cae a appsettings/user-secrets (local)
+// Database — lee CONNECTION_STRING (Railway) o cae a appsettings/user-secrets (local).
+// Railway entrega la URL en formato URI (postgresql://...); se normaliza a key=value para Npgsql.
 var connectionString =
-    Environment.GetEnvironmentVariable("CONNECTION_STRING")
-    ?? builder.Configuration.GetConnectionString("DefaultConnection")
+    NormalizePostgresConnectionString(
+        Environment.GetEnvironmentVariable("CONNECTION_STRING")
+        ?? builder.Configuration.GetConnectionString("DefaultConnection"))
     ?? throw new InvalidOperationException("No connection string configured.");
 
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -283,3 +285,34 @@ app.MapWorkshopOrderEndpoints();
 app.MapHub<StockHub>("/hubs/stock");
 
 app.Run();
+
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+// Railway/Heroku entregan la conexión Postgres como URI (postgresql://user:pass@host:port/db),
+// formato que Npgsql NO parsea. Esta función la convierte a key=value (Host=...;Username=...).
+// Si la cadena ya viene en formato key=value (local), se devuelve sin cambios.
+static string? NormalizePostgresConnectionString(string? raw)
+{
+    if (string.IsNullOrWhiteSpace(raw))
+        return raw;
+
+    if (!raw.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) &&
+        !raw.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
+        return raw;
+
+    var uri = new Uri(raw);
+    var userInfo = uri.UserInfo.Split(':', 2);
+
+    var csb = new Npgsql.NpgsqlConnectionStringBuilder
+    {
+        Host = uri.Host,
+        Port = uri.Port > 0 ? uri.Port : 5432,
+        Username = Uri.UnescapeDataString(userInfo[0]),
+        Password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : string.Empty,
+        Database = uri.AbsolutePath.TrimStart('/'),
+        // El proxy público de Railway exige SSL. En Npgsql 8, Require encripta sin validar el cert.
+        SslMode = Npgsql.SslMode.Require,
+    };
+
+    return csb.ConnectionString;
+}
