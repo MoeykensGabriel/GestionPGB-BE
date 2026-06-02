@@ -43,11 +43,21 @@ builder.Host.UseSerilog((context, _, configuration) =>
 
 // Database — lee CONNECTION_STRING (Railway) o cae a appsettings/user-secrets (local).
 // Railway entrega la URL en formato URI (postgresql://...); se normaliza a key=value para Npgsql.
-var connectionString =
-    NormalizePostgresConnectionString(
-        Environment.GetEnvironmentVariable("CONNECTION_STRING")
-        ?? builder.Configuration.GetConnectionString("DefaultConnection"))
-    ?? throw new InvalidOperationException("No connection string configured.");
+var rawConnection =
+    Environment.GetEnvironmentVariable("CONNECTION_STRING")
+    ?? builder.Configuration.GetConnectionString("DefaultConnection");
+
+var connectionString = NormalizePostgresConnectionString(rawConnection);
+
+// Validación temprana con mensaje accionable (en vez del críptico "Host can't be null" de Npgsql).
+if (string.IsNullOrWhiteSpace(connectionString) ||
+    !connectionString.Contains("Host", StringComparison.OrdinalIgnoreCase))
+{
+    throw new InvalidOperationException(
+        "CONNECTION_STRING vacía, no configurada o sin host. En Railway: el servicio debe tener la " +
+        "variable CONNECTION_STRING referenciando ${{Postgres.DATABASE_URL}} y el cambio debe estar APLICADO. " +
+        $"(longitud recibida: {rawConnection?.Length ?? 0})");
+}
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
