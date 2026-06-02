@@ -17,7 +17,6 @@ WORKDIR /app
 
 COPY --from=build /app/publish .
 
-# Railway inyecta PORT; ASP.NET lo lee con ASPNETCORE_URLS
-ENV ASPNETCORE_URLS=http://+:${PORT:-8080}
-
-ENTRYPOINT ["dotnet", "GestionPGB-BE.API.dll"]
+# Railway inyecta PORT en runtime. Se usa entrypoint con shell para que ${PORT} se
+# expanda al arrancar el contenedor (no en build) y Kestrel escuche en el puerto correcto.
+ENTRYPOINT ["sh", "-c", "ASPNETCORE_URLS=http://+:${PORT:-8080} dotnet GestionPGB-BE.API.dll"]
