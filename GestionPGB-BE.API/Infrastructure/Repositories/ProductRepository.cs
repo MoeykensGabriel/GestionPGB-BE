@@ -11,7 +11,7 @@ public class ProductRepository : IProductRepository
 
     public ProductRepository(AppDbContext context) => _context = context;
 
-    public async Task<(IEnumerable<Product> Items, int Total)> GetPagedAsync(int page, int pageSize, string? search)
+    public async Task<(IEnumerable<Product> Items, int Total)> GetPagedAsync(int page, int pageSize, string? search, string? provider)
     {
         var query = _context.Products.AsNoTracking();
 
@@ -24,6 +24,13 @@ public class ProductRepository : IProductRepository
                 p.ProviderName.ToLower().Contains(s));
         }
 
+        // Filtro exacto por proveedor (selector del front).
+        if (!string.IsNullOrWhiteSpace(provider))
+        {
+            var prov = provider.Trim();
+            query = query.Where(p => p.ProviderName == prov);
+        }
+
         var total = await query.CountAsync();
         var items = await query
             .OrderBy(p => p.ItemName)
@@ -33,6 +40,14 @@ public class ProductRepository : IProductRepository
 
         return (items, total);
     }
+
+    public async Task<IEnumerable<string>> GetProvidersAsync() =>
+        await _context.Products.AsNoTracking()
+            .Select(p => p.ProviderName)
+            .Where(name => name != null && name != "")
+            .Distinct()
+            .OrderBy(name => name)
+            .ToListAsync();
 
     public async Task<int> GetTotalCountAsync() =>
         await _context.Products.CountAsync();

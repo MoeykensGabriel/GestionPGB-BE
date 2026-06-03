@@ -4,7 +4,8 @@ namespace GestionPGB_BE.API.Domain.Interfaces;
 
 public interface IProductRepository
 {
-    Task<(IEnumerable<Product> Items, int Total)> GetPagedAsync(int page, int pageSize, string? search);
+    Task<(IEnumerable<Product> Items, int Total)> GetPagedAsync(int page, int pageSize, string? search, string? provider);
+    Task<IEnumerable<string>> GetProvidersAsync();
     Task<int> GetTotalCountAsync();
     Task<Product?> GetByIdAsync(Guid id);
     Task<Product?> GetByBarcodeAsync(string barcode);

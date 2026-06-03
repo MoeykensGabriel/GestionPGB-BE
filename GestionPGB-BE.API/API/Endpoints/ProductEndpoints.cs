@@ -9,9 +9,13 @@ public static class ProductEndpoints
     {
         var group = app.MapGroup("/api/products").WithTags("Products").RequireAuthorization().RequireRateLimiting("global");
 
-        group.MapGet("/", async (IProductService service, int page = 1, int pageSize = 20, string? search = null) =>
-            Results.Ok(await service.GetPagedAsync(page, pageSize, search)))
+        group.MapGet("/", async (IProductService service, int page = 1, int pageSize = 20, string? search = null, string? provider = null) =>
+            Results.Ok(await service.GetPagedAsync(page, pageSize, search, provider)))
         .WithName("GetAllProducts");
+
+        group.MapGet("/providers", async (IProductService service) =>
+            Results.Ok(await service.GetProvidersAsync()))
+        .WithName("GetProviders");
 
         group.MapGet("/low-stock", async (IProductService service) =>
             Results.Ok(await service.GetLowStockAsync()))

@@ -5,7 +5,8 @@ namespace GestionPGB_BE.API.Application.Services;
 
 public interface IProductService
 {
-    Task<PagedResultDto<ProductResponseDto>> GetPagedAsync(int page, int pageSize, string? search);
+    Task<PagedResultDto<ProductResponseDto>> GetPagedAsync(int page, int pageSize, string? search, string? provider);
+    Task<IEnumerable<string>> GetProvidersAsync();
     Task<ProductResponseDto?> GetByIdAsync(Guid id);
     Task<ProductResponseDto?> GetByBarcodeAsync(string barcode);
     Task<IEnumerable<ProductResponseDto>> GetLowStockAsync();

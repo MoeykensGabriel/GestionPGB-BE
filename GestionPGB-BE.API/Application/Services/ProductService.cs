@@ -11,11 +11,14 @@ public class ProductService : IProductService
 
     public ProductService(IProductRepository repository) => _repository = repository;
 
-    public async Task<PagedResultDto<ProductResponseDto>> GetPagedAsync(int page, int pageSize, string? search)
+    public async Task<PagedResultDto<ProductResponseDto>> GetPagedAsync(int page, int pageSize, string? search, string? provider)
     {
-        var (items, total) = await _repository.GetPagedAsync(page, pageSize, search);
+        var (items, total) = await _repository.GetPagedAsync(page, pageSize, search, provider);
         return new PagedResultDto<ProductResponseDto>(items.Select(ToDto), total, page, pageSize);
     }
+
+    public async Task<IEnumerable<string>> GetProvidersAsync() =>
+        await _repository.GetProvidersAsync();
 
     public async Task<ProductResponseDto?> GetByIdAsync(Guid id)
     {
